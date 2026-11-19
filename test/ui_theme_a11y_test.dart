@@ -21,17 +21,23 @@ void main() {
           '${mode == AppThemeMode.dark ? 'ダーク' : 'ライト'}/${themeChoices[i].name}';
 
       Future<void> pump(WidgetTester tester) async {
-        setScreen(tester, const Size(390, 1200));
+        setScreen(tester, const Size(390, 1600));
+        final records = FakeRecordRepository([
+          rec('2026-11-18', true),
+          rec('2026-11-19', false),
+        ]);
+        // ご褒美タブ用: 交換できるもの・できないものを1つずつ。
+        final rewards = FakeRewardRepository(records);
+        await rewards.addReward('コーヒー', 10, DateTime(2026, 11, 20));
+        await rewards.addReward('映画', 500, DateTime(2026, 11, 20));
         await tester.pumpWidget(
           buildApp(
             clock: () => DateTime(2026, 11, 20, 6, 0),
             settings: FakeSettings(
               AppSettings(themeColorIndex: i, themeMode: mode),
             ),
-            repo: FakeRecordRepository([
-              rec('2026-11-18', true),
-              rec('2026-11-19', false),
-            ]),
+            repo: records,
+            rewards: rewards,
           ),
         );
         await tester.pumpAndSettle();
@@ -66,6 +72,15 @@ void main() {
         final h = tester.ensureSemantics();
         await pump(tester);
         await tester.tap(find.byIcon(Icons.settings));
+        await tester.pumpAndSettle();
+        await _check(tester);
+        h.dispose();
+      });
+
+      testWidgets('$name: ご褒美', (tester) async {
+        final h = tester.ensureSemantics();
+        await pump(tester);
+        await tester.tap(find.byIcon(Icons.card_giftcard));
         await tester.pumpAndSettle();
         await _check(tester);
         h.dispose();

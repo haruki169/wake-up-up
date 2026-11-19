@@ -7,7 +7,7 @@ import 'achievement_ui.dart';
 import 'providers.dart';
 import 'wake_button.dart';
 
-/// ホーム画面。目標時刻、今日の結果、累計ポイント、連続成功日数を表示し、
+/// ホーム画面。目標時刻、今日の結果、ポイント残高、連続成功日数を表示し、
 /// 画面下部に「起きた」ボタンを固定する。
 ///
 /// ボタンはスクロールする領域の外に置くため、文字サイズが大きい端末でも
@@ -20,6 +20,8 @@ class HomePage extends ConsumerWidget {
     final records = ref.watch(recordsProvider);
     final target = ref.watch(targetTimeProvider);
     final settings = ref.watch(settingsProvider);
+    // ポイント残高(読み込み前・失敗時は累計獲得で代用)。
+    final balance = ref.watch(rewardsProvider).value?.balance;
     // 日付の境界を過ぎると自動で更新される。
     final today = ref.watch(todayProvider);
 
@@ -50,8 +52,8 @@ class HomePage extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: _Stat(
-                          label: '累計ポイント',
-                          value: '${totalPoints(list)} pt',
+                          label: 'ポイント残高',
+                          value: '${balance ?? totalPoints(list)} pt',
                         ),
                       ),
                       Expanded(
@@ -129,7 +131,7 @@ class _TodayCard extends StatelessWidget {
   }
 }
 
-/// ラベルと値を縦に並べた集計表示(累計ポイント、連続成功日数など)。
+/// ラベルと値を縦に並べた集計表示(ポイント残高、連続成功日数など)。
 class _Stat extends StatelessWidget {
   const _Stat({required this.label, required this.value});
 

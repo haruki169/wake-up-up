@@ -7,6 +7,7 @@ import '../data/reward_repository.dart';
 import '../data/settings_repository.dart';
 import '../domain/achievements.dart';
 import '../domain/app_settings.dart';
+import '../domain/reward.dart';
 import '../domain/wake_logic.dart';
 import '../domain/wake_record.dart';
 
@@ -120,4 +121,85 @@ class TodayNotifier extends Notifier<String> {
 /// 今日の論理日付。ホームの「今日の記録」の判定に使う。
 final todayProvider = NotifierProvider<TodayNotifier, String>(
   TodayNotifier.new,
+);
+
+/// ご褒美画面の状態(ご褒美・交換履歴・ポイント)。
+class RewardsState {
+  const RewardsState({
+    required this.rewards,
+    required this.redemptions,
+    required this.earned,
+    required this.spent,
+  });
+
+  /// アーカイブしていないご褒美(登録順)。
+  final List<Reward> rewards;
+
+  /// 交換履歴(新しい順)。
+  final List<Redemption> redemptions;
+
+  /// 累計獲得ポイント。
+  final int earned;
+
+  /// 使用済みポイント。
+  final int spent;
+
+  /// ポイント残高(累計獲得 − 使用済み)。
+  int get balance => pointBalance(earned: earned, spent: spent);
+}
+
+/// ご褒美・交換・残高の状態管理。
+///
+/// 起床記録が変わる(新しく記録する)と、獲得ポイントが変わるため再計算する。
+class RewardsNotifier extends AsyncNotifier<RewardsState> {
+  @override
+  Future<RewardsState> build() {
+    // 記録が更新されたら、累計獲得・残高を作り直す。
+    ref.watch(recordsProvider);
+    return _load();
+  }
+
+  Future<RewardsState> _load() async {
+    final repo = ref.read(rewardRepositoryProvider);
+    return RewardsState(
+      rewards: await repo.activeRewards(),
+      redemptions: await repo.redemptions(),
+      earned: await repo.totalEarned(),
+      spent: await repo.totalSpent(),
+    );
+  }
+
+  /// 成功したときだけ状態を読み込み直して、結果をそのまま返す。
+  Future<RewardResult> _reloadIfOk(Future<RewardResult> operation) async {
+    final result = await operation;
+    if (result == RewardResult.ok) state = AsyncData(await _load());
+    return result;
+  }
+
+  /// ご褒美を追加する。
+  Future<RewardResult> add(String name, int cost) => _reloadIfOk(
+    ref
+        .read(rewardRepositoryProvider)
+        .addReward(name, cost, ref.read(clockProvider)()),
+  );
+
+  /// ご褒美の名前・必要ポイントを変更する。
+  Future<RewardResult> updateReward(int id, String name, int cost) =>
+      _reloadIfOk(
+        ref.read(rewardRepositoryProvider).updateReward(id, name, cost),
+      );
+
+  /// ご褒美を削除(アーカイブ)する。交換履歴は残る。
+  Future<RewardResult> archive(int id) =>
+      _reloadIfOk(ref.read(rewardRepositoryProvider).archiveReward(id));
+
+  /// ご褒美とポイントを交換する(取り消しはできない)。
+  Future<RewardResult> redeem(int id) => _reloadIfOk(
+    ref.read(rewardRepositoryProvider).redeem(id, ref.read(clockProvider)()),
+  );
+}
+
+/// ご褒美・交換履歴・ポイントの状態。
+final rewardsProvider = AsyncNotifierProvider<RewardsNotifier, RewardsState>(
+  RewardsNotifier.new,
 );

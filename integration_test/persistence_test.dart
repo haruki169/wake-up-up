@@ -6,7 +6,9 @@ import 'package:integration_test/integration_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:wake_up_up/data/app_database.dart';
 import 'package:wake_up_up/data/record_repository.dart';
+import 'package:wake_up_up/data/reward_repository.dart';
 import 'package:wake_up_up/data/settings_repository.dart';
 import 'package:wake_up_up/domain/app_settings.dart';
 import 'package:wake_up_up/domain/wake_logic.dart';
@@ -17,11 +19,12 @@ import 'package:wake_up_up/presentation/theme_options.dart';
 
 /// アプリを(再)起動する。保存先を開き直し、新しい ProviderScope で構築する。
 Future<Widget> _launch() async {
-  final records = await SqliteRecordRepository.open();
+  final db = await AppDatabase.open();
   final prefs = await SharedPreferences.getInstance();
   return ProviderScope(
     overrides: [
-      recordRepositoryProvider.overrideWithValue(records),
+      recordRepositoryProvider.overrideWithValue(SqliteRecordRepository(db)),
+      rewardRepositoryProvider.overrideWithValue(SqliteRewardRepository(db)),
       settingsRepositoryProvider.overrideWithValue(
         PrefsSettingsRepository(prefs),
       ),
@@ -197,6 +200,54 @@ void main() {
     await tester.tap(find.byIcon(Icons.history));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('badges_card')), findsOneWidget);
+  });
+
+  testWidgets('ご褒美を登録して交換すると、再起動後も残高・履歴・ご褒美が残る', (tester) async {
+    // 実DBに獲得ポイント(100pt)を入れてから起動する。
+    final repo = await SqliteRecordRepository.open();
+    await repo.insert(
+      buildRecord(DateTime(2026, 11, 18, 6, 0), const TargetTime(23, 59)),
+    );
+    final earned = (await repo.all()).single.points;
+
+    await tester.pumpWidget(await _launch());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.card_giftcard));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('empty_rewards')), findsOneWidget);
+
+    // 追加
+    await tester.tap(find.byKey(const Key('add_reward')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('reward_name')), 'コーヒー');
+    await tester.enterText(find.byKey(const Key('reward_cost')), '10');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('reward_save')));
+    await tester.pumpAndSettle();
+    expect(find.text('必要 10 pt'), findsOneWidget);
+
+    // 交換
+    await tester.tap(find.byKey(const Key('redeem_1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm_redeem')));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<Text>(find.byKey(const Key('balance_value'))).data,
+      '${earned - 10} pt',
+    );
+
+    // 再起動後も残る
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(await _launch());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.card_giftcard));
+    await tester.pumpAndSettle();
+    expect(find.text('必要 10 pt'), findsOneWidget);
+    expect(find.byKey(const Key('redemption_1')), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.byKey(const Key('spent_value'))).data,
+      '使用済み 10 pt',
+    );
   });
 
   testWidgets('保存した記録の内容(目標・成否・ポイント)が正しく復元される', (tester) async {

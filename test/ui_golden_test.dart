@@ -293,4 +293,74 @@ void main() {
     await tester.pumpAndSettle();
     await _golden(tester, 'calendar_day_sheet');
   });
+
+  /// ご褒美タブを開く(獲得 [points]pt、登録済みのご褒美、交換済みの名前)。
+  Future<FakeRewardRepository> openRewards(
+    WidgetTester tester, {
+    int points = 120,
+    bool withRewards = true,
+    AppSettings? settings,
+    Size size = const Size(390, 1500),
+  }) async {
+    setScreen(tester, size);
+    final records = FakeRecordRepository([
+      rec('2026-11-19', true, points: points),
+    ]);
+    final rewards = FakeRewardRepository(records);
+    if (withRewards) {
+      await rewards.addReward('好きなお菓子', 100, DateTime(2026, 11, 20));
+      await rewards.addReward('映画', 500, DateTime(2026, 11, 20));
+    }
+    await tester.pumpWidget(
+      buildApp(
+        clock: () => DateTime(2026, 11, 20, 6, 0),
+        repo: records,
+        rewards: rewards,
+        settings: settings == null ? null : FakeSettings(settings),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.card_giftcard));
+    await tester.pumpAndSettle();
+    return rewards;
+  }
+
+  testWidgets('ご褒美: 空の状態(候補)', (tester) async {
+    await openRewards(tester, withRewards: false, points: 0);
+    await _golden(tester, 'rewards_empty');
+  });
+
+  testWidgets('ご褒美: 一覧(交換できる/あと少し)と交換履歴', (tester) async {
+    await openRewards(tester, points: 220);
+    // 画面から「好きなお菓子」を交換して、残高・使用済み・履歴を出す。
+    await tester.tap(find.byKey(const Key('redeem_1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm_redeem')));
+    await tester.pumpAndSettle();
+    await _golden(tester, 'rewards_list');
+  });
+
+  testWidgets('ご褒美: 一覧(ダーク)', (tester) async {
+    await openRewards(
+      tester,
+      settings: const AppSettings(themeMode: AppThemeMode.dark),
+    );
+    await _golden(tester, 'rewards_dark');
+  });
+
+  testWidgets('ご褒美: 交換の確認ダイアログ', (tester) async {
+    await openRewards(tester, size: const Size(390, 844));
+    await tester.tap(find.byKey(const Key('redeem_1')));
+    await tester.pumpAndSettle();
+    await _golden(tester, 'rewards_redeem_dialog');
+  });
+
+  testWidgets('ご褒美: 追加ダイアログ(入力エラー)', (tester) async {
+    await openRewards(tester, size: const Size(390, 844));
+    await tester.tap(find.byKey(const Key('add_reward')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('reward_save')));
+    await tester.pumpAndSettle();
+    await _golden(tester, 'rewards_editor_error');
+  });
 }

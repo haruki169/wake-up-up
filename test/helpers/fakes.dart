@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart'
     show WidgetTester, addTearDown, find;
 import 'package:wake_up_up/data/record_repository.dart';
+import 'package:wake_up_up/data/reward_repository.dart';
 import 'package:wake_up_up/data/settings_repository.dart';
 import 'package:wake_up_up/domain/app_settings.dart';
+import 'package:wake_up_up/domain/reward.dart';
 import 'package:wake_up_up/domain/wake_record.dart';
 import 'package:wake_up_up/presentation/app.dart';
 import 'package:wake_up_up/presentation/providers.dart';
@@ -33,6 +35,107 @@ class FakeRecordRepository implements RecordRepository {
     _m[r.date] = r;
     return true;
   }
+}
+
+/// メモリ上のご褒美リポジトリ(テスト用)。[SqliteRewardRepository] と同じ規則で動く。
+///
+/// 累計獲得は、渡された起床記録リポジトリの獲得ポイントの合計。
+class FakeRewardRepository implements RewardRepository {
+  FakeRewardRepository(this._records);
+
+  final RecordRepository _records;
+  final List<Reward> _rewards = [];
+  final Set<int> _archived = {};
+  final List<Redemption> _redemptions = [];
+  int _nextId = 1;
+  int _nextRedemptionId = 1;
+
+  /// redeem が呼ばれた回数。
+  int redeemCalls = 0;
+
+  @override
+  Future<List<Reward>> activeRewards() async => [
+    for (final r in _rewards)
+      if (!_archived.contains(r.id)) r,
+  ];
+
+  @override
+  Future<RewardResult> addReward(String name, int cost, DateTime now) async {
+    final invalid = validateReward(name, cost);
+    if (invalid != null) return invalid;
+    if ((await activeRewards()).length >= maxActiveRewards) {
+      return RewardResult.limitReached;
+    }
+    _rewards.add(
+      Reward(
+        id: _nextId++,
+        name: normalizeRewardName(name),
+        cost: cost,
+        createdAt: now,
+      ),
+    );
+    return RewardResult.ok;
+  }
+
+  @override
+  Future<RewardResult> updateReward(int id, String name, int cost) async {
+    final invalid = validateReward(name, cost);
+    if (invalid != null) return invalid;
+    final i = _rewards.indexWhere((r) => r.id == id && !_archived.contains(id));
+    if (i < 0) return RewardResult.notFound;
+    _rewards[i] = Reward(
+      id: id,
+      name: normalizeRewardName(name),
+      cost: cost,
+      createdAt: _rewards[i].createdAt,
+    );
+    return RewardResult.ok;
+  }
+
+  @override
+  Future<RewardResult> archiveReward(int id) async {
+    final exists = _rewards.any((r) => r.id == id) && !_archived.contains(id);
+    if (!exists) return RewardResult.notFound;
+    _archived.add(id);
+    return RewardResult.ok;
+  }
+
+  @override
+  Future<RewardResult> redeem(int rewardId, DateTime now) async {
+    redeemCalls++;
+    final i = _rewards.indexWhere(
+      (r) => r.id == rewardId && !_archived.contains(rewardId),
+    );
+    if (i < 0) return RewardResult.notFound;
+    final reward = _rewards[i];
+    if (await balance() < reward.cost) return RewardResult.insufficientBalance;
+    _redemptions.add(
+      Redemption(
+        id: _nextRedemptionId++,
+        rewardId: reward.id,
+        rewardName: reward.name,
+        cost: reward.cost,
+        redeemedAt: now,
+      ),
+    );
+    return RewardResult.ok;
+  }
+
+  @override
+  Future<List<Redemption>> redemptions() async =>
+      _redemptions.reversed.toList();
+
+  @override
+  Future<int> totalEarned() async =>
+      (await _records.all()).fold<int>(0, (sum, r) => sum + r.points);
+
+  @override
+  Future<int> totalSpent() async =>
+      _redemptions.fold<int>(0, (sum, r) => sum + r.cost);
+
+  @override
+  Future<int> balance() async =>
+      pointBalance(earned: await totalEarned(), spent: await totalSpent());
 }
 
 /// 読み込みが常に失敗するリポジトリ(エラー表示の確認用)。
@@ -76,18 +179,27 @@ WakeRecord rec(String date, bool ok, {int points = 10}) => WakeRecord(
 );
 
 /// テスト対象のアプリ。[clock] は呼ぶたびに現在時刻を返す関数。
+///
+/// [rewards] を省略すると、[repo] の獲得ポイントを使うメモリ上のご褒美リポジトリになる。
 Widget buildApp({
   required DateTime Function() clock,
   RecordRepository? repo,
   SettingsRepository? settings,
-}) => ProviderScope(
-  overrides: [
-    recordRepositoryProvider.overrideWithValue(repo ?? FakeRecordRepository()),
-    settingsRepositoryProvider.overrideWithValue(settings ?? FakeSettings()),
-    clockProvider.overrideWithValue(clock),
-  ],
-  child: const WakeUpUpApp(),
-);
+  RewardRepository? rewards,
+}) {
+  final records = repo ?? FakeRecordRepository();
+  return ProviderScope(
+    overrides: [
+      recordRepositoryProvider.overrideWithValue(records),
+      rewardRepositoryProvider.overrideWithValue(
+        rewards ?? FakeRewardRepository(records),
+      ),
+      settingsRepositoryProvider.overrideWithValue(settings ?? FakeSettings()),
+      clockProvider.overrideWithValue(clock),
+    ],
+    child: const WakeUpUpApp(),
+  );
+}
 
 /// 画面サイズ(論理px)を設定する。テスト終了時に元へ戻す。
 void setScreen(
