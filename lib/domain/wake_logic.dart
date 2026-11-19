@@ -16,8 +16,8 @@ const int bonusMax = 5;
 /// 目標より何分早いごとにボーナスを +1pt するか(分)。
 const int bonusStepMinutes = 10;
 
-/// 日付を `yyyy-MM-dd` 形式の文字列にする。
-String _fmt(DateTime d) =>
+/// 日付を `yyyy-MM-dd` 形式の文字列にする(時刻・午前3:00 の境界は考慮しない)。
+String formatDate(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
 /// [now] が属する論理日付の 0:00 を返す。[dayBoundaryHour] より前なら前日。
@@ -30,7 +30,7 @@ DateTime _day(DateTime now) {
 ///
 /// 午前3:00より前は前日扱い。例: 11/19 02:59 → `2026-11-18`、
 /// 11/19 03:00 → `2026-11-19`。
-String logicalDate(DateTime now) => _fmt(_day(now));
+String logicalDate(DateTime now) => formatDate(_day(now));
 
 /// [now] の次に日付が替わる時刻(次の午前3:00)を返す。
 ///
@@ -94,7 +94,7 @@ int currentStreak(Iterable<WakeRecord> records, String today) {
   }
   var streak = 0;
   while (true) {
-    final r = byDate[_fmt(cursor)];
+    final r = byDate[formatDate(cursor)];
     if (r == null || !r.success) break;
     streak++;
     cursor = DateTime(cursor.year, cursor.month, cursor.day - 1);

@@ -229,4 +229,68 @@ void main() {
     await tester.pumpAndSettle();
     await _golden(tester, 'history_badges');
   });
+
+  testWidgets('履歴: カレンダー(成功・失敗・今日・未来)', (tester) async {
+    setScreen(tester, const Size(390, 1500));
+    await tester.pumpWidget(
+      buildApp(
+        clock: () => DateTime(2026, 11, 20, 6, 0),
+        repo: FakeRecordRepository([
+          rec('2026-11-02', true),
+          rec('2026-11-03', true),
+          rec('2026-11-04', false),
+          rec('2026-11-09', true),
+          rec('2026-11-16', true),
+          rec('2026-11-17', true),
+          rec('2026-11-18', false),
+          rec('2026-11-19', true),
+        ]),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.history));
+    await tester.pumpAndSettle();
+    await _golden(tester, 'calendar');
+  });
+
+  testWidgets('履歴: カレンダー(ダーク)', (tester) async {
+    setScreen(tester, const Size(390, 1500));
+    await tester.pumpWidget(
+      buildApp(
+        clock: () => DateTime(2026, 11, 20, 6, 0),
+        settings: FakeSettings(const AppSettings(themeMode: AppThemeMode.dark)),
+        repo: FakeRecordRepository([
+          rec('2026-11-02', true),
+          rec('2026-11-04', false),
+          rec('2026-11-19', true),
+        ]),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.history));
+    await tester.pumpAndSettle();
+    await _golden(tester, 'calendar_dark');
+  });
+
+  testWidgets('履歴: 日付をタップした詳細シート', (tester) async {
+    setScreen(tester, const Size(390, 844));
+    await tester.pumpWidget(
+      buildApp(
+        clock: () => DateTime(2026, 11, 20, 6, 0),
+        repo: FakeRecordRepository([rec('2026-11-19', true)]),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.history));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('cell_2026-11-19')),
+      200,
+    );
+    await tester.ensureVisible(find.byKey(const Key('cell_2026-11-19')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('cell_2026-11-19')));
+    await tester.pumpAndSettle();
+    await _golden(tester, 'calendar_day_sheet');
+  });
 }
