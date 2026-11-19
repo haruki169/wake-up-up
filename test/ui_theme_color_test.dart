@@ -138,6 +138,7 @@ void main() {
   });
 
   testWidgets('履歴の成功/失敗の色はテーマ連動(StatusColors)', (tester) async {
+    setScreen(tester, const Size(390, 1200));
     await tester.pumpWidget(
       buildApp(
         clock: () => DateTime(2026, 11, 20, 6, 0),

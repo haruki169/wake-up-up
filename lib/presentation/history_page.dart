@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../domain/achievements.dart';
 import '../domain/stats.dart';
 import '../domain/wake_record.dart';
 import 'providers.dart';
@@ -21,12 +22,13 @@ class HistoryPage extends ConsumerWidget {
       data: (list) {
         if (list.isEmpty) return const Center(child: Text('まだ記録がありません'));
         return ListView.separated(
-          // 先頭はベスト記録のカード、2番目以降が日ごとの記録。
-          itemCount: list.length + 1,
+          // 先頭はベスト記録、2番目はバッジ、3番目以降が日ごとの記録。
+          itemCount: list.length + 2,
           separatorBuilder: (_, _) => const Divider(height: 1),
           itemBuilder: (context, i) {
             if (i == 0) return _BestRecordsCard(records: list);
-            final r = list[i - 1];
+            if (i == 1) return _BadgesCard(records: list);
+            final r = list[i - 2];
             final woke = TimeOfDay.fromDateTime(r.wokeAt).format(context);
             return ListTile(
               key: Key('day_${r.date}'),
@@ -70,6 +72,7 @@ class _BestRecordsCard extends StatelessWidget {
         child: Column(
           children: [
             Semantics(
+              container: true,
               header: true,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -135,4 +138,75 @@ class _BestRow extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// 連続成功のバッジ一覧(取得済みは色付き、未取得は灰色)。
+class _BadgesCard extends StatelessWidget {
+  const _BadgesCard({required this.records});
+
+  /// 取得状況を調べる全記録。
+  final List<WakeRecord> records;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final badges = badgeStatuses(records);
+    final earnedCount = badges.where((b) => b.earned).length;
+    return Card(
+      key: const Key('badges_card'),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Semantics(
+              container: true,
+              header: true,
+              child: Text(
+                'バッジ($earnedCount/${badges.length})',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '連続して成功した日数で手に入ります',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                for (final b in badges)
+                  Semantics(
+                    key: Key('badge_${b.days}'),
+                    // カードに統合されず、バッジごとに個別に読み上げられるようにする。
+                    container: true,
+                    label: '${b.days}日連続のバッジ、${b.earned ? '取得済み' : '未取得'}',
+                    excludeSemantics: true,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          b.earned ? Icons.emoji_events : Icons.lock_outline,
+                          size: 36,
+                          color: b.earned
+                              ? scheme.primary
+                              : scheme.onSurfaceVariant,
+                        ),
+                        Text(
+                          '${b.days}日',
+                          style: Theme.of(context).textTheme.labelMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

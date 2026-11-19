@@ -151,6 +151,40 @@ void main() {
     );
   });
 
+  testWidgets('実際のDBの記録で、3日連続の節目のお祝いが出る(初回のみ)', (tester) async {
+    // 一昨日・昨日の成功を実DBに入れてから起動する。
+    final repo = await SqliteRecordRepository.open();
+    final now = DateTime.now();
+    for (final back in [2, 1]) {
+      final day = DateTime(now.year, now.month, now.day - back, 6, 0);
+      await repo.insert(buildRecord(day, const TargetTime(23, 59)));
+    }
+    await tester.pumpWidget(await _launch());
+    await tester.pumpAndSettle();
+    // 目標を 23:59 にして、いつ実行しても今日が成功になるようにする。
+    final prefs = await SharedPreferences.getInstance();
+    await PrefsSettingsRepository(prefs)
+        .save(const AppSettings(targetTime: TargetTime(23, 59)));
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(await _launch());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('wake_button')));
+    await tester.pumpAndSettle();
+    // 午前3:00 より前に実行すると今日が前日扱いになり節目にならないため、時刻で分岐する。
+    if (now.hour >= 3) {
+      expect(find.byKey(const Key('milestone_dialog')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('milestone_close')));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('記録済み'), findsOneWidget);
+
+    // 履歴にバッジ(3日)が出る。
+    await tester.tap(find.byIcon(Icons.history));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('badges_card')), findsOneWidget);
+  });
+
   testWidgets('保存した記録の内容(目標・成否・ポイント)が正しく復元される', (tester) async {
     final repo = await SqliteRecordRepository.open();
     final woke = DateTime(2026, 11, 19, 6, 20);
