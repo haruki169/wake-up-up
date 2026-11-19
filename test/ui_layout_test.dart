@@ -89,4 +89,35 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
+
+  for (final (label, size, scale) in [
+    ('小さい画面 320x568', const Size(320, 568), 1.0),
+    ('小さい画面 + 文字3倍', const Size(320, 568), 3.0),
+    ('横向き 844x390', const Size(844, 390), 1.0),
+  ]) {
+    testWidgets('設定画面を最後までスクロールできる($label)', (tester) async {
+      setScreen(tester, size, textScale: scale);
+      await tester.pumpWidget(
+        buildApp(clock: () => DateTime(2026, 11, 19, 6, 0)),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.settings));
+      await tester.pumpAndSettle();
+      await tester.fling(find.byType(ListView), const Offset(0, -3000), 3000);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      // テーマカラーを選べる(スクロール後でも操作できる)。
+      await tester.fling(find.byType(ListView), const Offset(0, 3000), 3000);
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('color_chip_7')),
+        100,
+      );
+      await tester.ensureVisible(find.byKey(const Key('color_chip_7')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('color_chip_7')));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+  }
 }

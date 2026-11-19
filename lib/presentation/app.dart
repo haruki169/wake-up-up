@@ -5,17 +5,23 @@ import 'history_page.dart';
 import 'home_page.dart';
 import 'providers.dart';
 import 'settings_page.dart';
+import 'theme_options.dart';
 
-/// アプリ全体のルート。テーマを設定し、[_Shell] を表示する。
-class WakeUpUpApp extends StatelessWidget {
+/// アプリ全体のルート。設定のテーマカラーを反映して [_Shell] を表示する。
+class WakeUpUpApp extends ConsumerWidget {
   const WakeUpUpApp({super.key});
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    title: 'wake-up-up',
-    theme: ThemeData(colorSchemeSeed: Colors.orange, useMaterial3: true),
-    home: const _Shell(),
-  );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colorIndex = ref.watch(
+      settingsProvider.select((s) => s.themeColorIndex),
+    );
+    return MaterialApp(
+      title: 'wake-up-up',
+      theme: buildTheme(colorIndex, Brightness.light),
+      home: const _Shell(),
+    );
+  }
 }
 
 /// 下部タブ(ホーム/履歴/設定)で3つの画面を切り替える枠組み。

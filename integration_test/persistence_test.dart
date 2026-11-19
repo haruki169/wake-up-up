@@ -13,6 +13,7 @@ import 'package:wake_up_up/domain/wake_logic.dart';
 import 'package:wake_up_up/domain/wake_record.dart';
 import 'package:wake_up_up/presentation/app.dart';
 import 'package:wake_up_up/presentation/providers.dart';
+import 'package:wake_up_up/presentation/theme_options.dart';
 
 /// アプリを(再)起動する。保存先を開き直し、新しい ProviderScope で構築する。
 Future<Widget> _launch() async {
@@ -83,6 +84,24 @@ void main() {
     await tester.pumpWidget(await _launch());
     await tester.pumpAndSettle();
     expect(find.text('目標 05:45'), findsOneWidget);
+  });
+
+  testWidgets('テーマカラーを選ぶと保存され、再起動後も維持される', (tester) async {
+    await tester.pumpWidget(await _launch());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('color_chip_4')));
+    await tester.pumpAndSettle();
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(await _launch());
+    await tester.pumpAndSettle();
+    final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(
+      app.theme!.colorScheme.primary,
+      buildTheme(4, Brightness.light).colorScheme.primary,
+    );
   });
 
   testWidgets('保存した記録の内容(目標・成否・ポイント)が正しく復元される', (tester) async {
