@@ -101,4 +101,50 @@ void main() {
     await tester.pumpAndSettle();
     await _golden(tester, 'settings_purple');
   });
+
+  testWidgets('ホーム: 成功(ダーク)', (tester) async {
+    setScreen(tester, const Size(390, 844));
+    await tester.pumpWidget(
+      buildApp(
+        clock: () => DateTime(2026, 11, 19, 6, 0),
+        settings: FakeSettings(const AppSettings(themeMode: AppThemeMode.dark)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('wake_button')));
+    await tester.pumpAndSettle();
+    await _golden(tester, 'home_success_dark');
+  });
+
+  testWidgets('履歴(ダーク)', (tester) async {
+    setScreen(tester, const Size(390, 844));
+    await tester.pumpWidget(
+      buildApp(
+        clock: () => DateTime(2026, 11, 20, 6, 0),
+        settings: FakeSettings(const AppSettings(themeMode: AppThemeMode.dark)),
+        repo: FakeRecordRepository([
+          rec('2026-11-18', true),
+          rec('2026-11-19', false),
+        ]),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.history));
+    await tester.pumpAndSettle();
+    await _golden(tester, 'history_dark');
+  });
+
+  testWidgets('設定(ダーク)', (tester) async {
+    setScreen(tester, const Size(390, 844));
+    await tester.pumpWidget(
+      buildApp(
+        clock: () => DateTime(2026, 11, 19, 6, 0),
+        settings: FakeSettings(const AppSettings(themeMode: AppThemeMode.dark)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pumpAndSettle();
+    await _golden(tester, 'settings_dark');
+  });
 }
