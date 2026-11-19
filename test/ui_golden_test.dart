@@ -147,4 +147,34 @@ void main() {
     await tester.pumpAndSettle();
     await _golden(tester, 'settings_dark');
   });
+
+  testWidgets('ホーム: 文言とアイコンを変更', (tester) async {
+    setScreen(tester, const Size(390, 844));
+    await tester.pumpWidget(
+      buildApp(
+        clock: () => DateTime(2026, 11, 19, 6, 0),
+        settings: FakeSettings(
+          const AppSettings(wakeLabel: '朝活スタート', wakeIconKey: 'rocket'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _golden(tester, 'home_custom_button');
+  });
+
+  testWidgets('設定: ホームのボタンのセクション', (tester) async {
+    setScreen(tester, const Size(390, 1500));
+    await tester.pumpWidget(
+      buildApp(
+        clock: () => DateTime(2026, 11, 19, 6, 0),
+        settings: FakeSettings(
+          const AppSettings(wakeLabel: '朝活', wakeIconKey: 'coffee'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pumpAndSettle();
+    await _golden(tester, 'settings_full');
+  });
 }

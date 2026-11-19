@@ -53,6 +53,9 @@ void main() {
   });
 
   testWidgets('設定', (tester) async {
+    // 設定画面は項目が多いため、全体が画面に収まる高さにして確認する
+    // (途中で切れた文字はコントラスト検査の誤検出になる)。
+    setScreen(tester, const Size(390, 1600));
     final h = tester.ensureSemantics();
     await tester.pumpWidget(
       buildApp(clock: () => DateTime(2026, 11, 19, 6, 0)),

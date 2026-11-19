@@ -141,7 +141,12 @@ void main() {
       await tester.tap(find.byKey(const Key('wake_button')));
       await tester.pumpAndSettle();
       for (final icon in [Icons.history, Icons.settings, Icons.wb_sunny]) {
-        await tester.tap(find.byIcon(icon));
+        await tester.tap(
+          find.descendant(
+            of: find.byType(NavigationBar),
+            matching: find.byIcon(icon),
+          ),
+        );
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
       }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/wake_logic.dart';
 import '../domain/wake_record.dart';
 import 'providers.dart';
+import 'wake_button.dart';
 
 /// ホーム画面。目標時刻、今日の結果、累計ポイント、連続成功日数を表示し、
 /// 画面下部に「起きた」ボタンを固定する。
@@ -17,6 +18,7 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final records = ref.watch(recordsProvider);
     final target = ref.watch(targetTimeProvider);
+    final settings = ref.watch(settingsProvider);
     // 日付の境界を過ぎると自動で更新される。
     final today = ref.watch(todayProvider);
 
@@ -65,18 +67,14 @@ class HomePage extends ConsumerWidget {
             // 記録済みの日は onPressed を null にして押せなくする(1日1回)。
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-              child: FilledButton(
+              child: buildWakeButton(
                 key: const Key('wake_button'),
+                // 記録済みの日は固定の文言「記録済み」(アイコンなし)にする。
+                label: todayRecord == null ? settings.wakeLabel : '記録済み',
+                iconKey: todayRecord == null ? settings.wakeIconKey : 'none',
                 onPressed: todayRecord == null
                     ? () => ref.read(recordsProvider.notifier).wake()
                     : null,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(72),
-                ),
-                child: Text(
-                  todayRecord == null ? '起きた' : '記録済み',
-                  style: const TextStyle(fontSize: 24),
-                ),
               ),
             ),
           ],
