@@ -4,6 +4,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wake_up_up/domain/app_settings.dart';
+import 'package:wake_up_up/domain/auto_advance.dart';
+import 'package:wake_up_up/domain/wake_record.dart';
 import 'package:wake_up_up/presentation/app.dart';
 
 import 'helpers/fakes.dart';
@@ -363,4 +365,54 @@ void main() {
     await tester.pumpAndSettle();
     await _golden(tester, 'rewards_editor_error');
   });
+
+  testWidgets('設定: 自動前倒しをオン', (tester) async {
+    setScreen(tester, const Size(390, 1900));
+    await tester.pumpWidget(
+      buildApp(
+        clock: () => DateTime(2026, 11, 20, 6, 0),
+        settings: FakeSettings(
+          const AppSettings(
+            targetTime: TargetTime(7, 0),
+            autoAdvance: AutoAdvance(enabled: true, days: 7, minutes: 15),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pumpAndSettle();
+    await _golden(tester, 'settings_auto_advance');
+  });
+
+  for (final reached in [false, true]) {
+    testWidgets('目標の前倒しダイアログ(到達=$reached)', (tester) async {
+      setScreen(tester, const Size(390, 844));
+      final target = reached
+          ? const TargetTime(6, 15)
+          : const TargetTime(6, 30);
+      await tester.pumpWidget(
+        buildApp(
+          clock: () => DateTime(2026, 11, 20, 6, 0),
+          settings: FakeSettings(
+            AppSettings(
+              targetTime: target,
+              autoAdvance: const AutoAdvance(enabled: true),
+            ),
+          ),
+          // 6日連続の成功(同じ目標)が済んでいて、今日で7日目。
+          repo: FakeRecordRepository([
+            for (var n = 14; n <= 19; n++)
+              rec('2026-11-$n', true, target: target),
+          ]),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('wake_button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('milestone_close')));
+      await tester.pumpAndSettle();
+      await _golden(tester, reached ? 'advance_dialog_goal' : 'advance_dialog');
+    });
+  }
 }

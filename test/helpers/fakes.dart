@@ -169,11 +169,16 @@ class FakeSettings implements SettingsRepository {
 String fmtDate(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-/// 成功/失敗の記録を作る。
-WakeRecord rec(String date, bool ok, {int points = 10}) => WakeRecord(
+/// 成功/失敗の記録を作る(6:00 起床、目標は [target]、初期は 6:30)。
+WakeRecord rec(
+  String date,
+  bool ok, {
+  int points = 10,
+  TargetTime target = const TargetTime(6, 30),
+}) => WakeRecord(
   date: date,
   wokeAt: DateTime.parse(date).add(const Duration(hours: 6)),
-  targetTime: const TargetTime(6, 30),
+  targetTime: target,
   success: ok,
   points: ok ? points : 0,
 );

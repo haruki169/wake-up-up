@@ -7,6 +7,7 @@ import '../data/reward_repository.dart';
 import '../data/settings_repository.dart';
 import '../domain/achievements.dart';
 import '../domain/app_settings.dart';
+import '../domain/auto_advance.dart';
 import '../domain/reward.dart';
 import '../domain/wake_logic.dart';
 import '../domain/wake_record.dart';
@@ -44,8 +45,62 @@ class SettingsNotifier extends Notifier<AppSettings> {
   }
 
   /// 目標起床時刻を [t] に変更する。過去の記録には影響しない。
-  Future<void> setTargetTime(TargetTime t) =>
-      update((s) => s.copyWith(targetTime: t));
+  ///
+  /// 自動前倒しが有効で、[t] が最終目標より早い時刻になるときは、
+  /// 自動前倒しをオフにする。オフにしたときは `true` を返す。
+  Future<bool> setTargetTime(TargetTime t) async {
+    final auto = state.autoAdvance;
+    final tooEarly = auto.enabled && targetOrder(t) < targetOrder(auto.goal);
+    await update(
+      (s) => s.copyWith(
+        targetTime: t,
+        autoAdvance: tooEarly ? auto.copyWith(enabled: false) : auto,
+      ),
+    );
+    return tooEarly;
+  }
+
+  /// 自動前倒しをオン/オフする。
+  ///
+  /// オンにするには、最終目標が現在の目標より早い時刻である必要がある。
+  /// 満たさないときは変更せず、その問題を返す(問題がなければ `null`)。
+  Future<GoalProblem?> setAutoEnabled(bool enabled) async {
+    final s = state;
+    if (enabled) {
+      final problem = validateGoal(
+        s.autoAdvance.goal,
+        s.targetTime,
+        requireBeforeTarget: true,
+      );
+      if (problem != null) return problem;
+    }
+    await update(
+      (c) => c.copyWith(autoAdvance: c.autoAdvance.copyWith(enabled: enabled)),
+    );
+    return null;
+  }
+
+  /// 自動前倒しの最終目標を [goal] に変更する。問題があれば変更せず、その問題を返す。
+  Future<GoalProblem?> setAutoGoal(TargetTime goal) async {
+    final s = state;
+    final problem = validateGoal(
+      goal,
+      s.targetTime,
+      requireBeforeTarget: s.autoAdvance.enabled,
+    );
+    if (problem != null) return problem;
+    await update(
+      (c) => c.copyWith(autoAdvance: c.autoAdvance.copyWith(goal: goal)),
+    );
+    return null;
+  }
+
+  /// 前倒しの連続成功日数 [days] と幅 [minutes] を変更する。
+  Future<void> setAutoRule({int? days, int? minutes}) => update(
+    (c) => c.copyWith(
+      autoAdvance: c.autoAdvance.copyWith(days: days, minutes: minutes),
+    ),
+  );
 }
 
 /// アプリ設定。
@@ -60,13 +115,20 @@ final targetTimeProvider = Provider<TargetTime>(
 
 /// 「起きた」を押した結果。
 class WakeResult {
-  const WakeResult({required this.saved, required this.achievements});
+  const WakeResult({
+    required this.saved,
+    required this.achievements,
+    this.autoAdvance,
+  });
 
   /// 記録が新しく保存されたか(今日が記録済みなら `false`)。
   final bool saved;
 
   /// 達成した内容(保存されなかったときは何もない)。
   final Achievements achievements;
+
+  /// 目標を自動で前倒しした場合の内容(前倒ししなかったときは `null`)。
+  final AutoAdvanceResult? autoAdvance;
 }
 
 /// 起床記録一覧(新しい日付順)の状態管理。
@@ -84,12 +146,41 @@ class RecordsNotifier extends AsyncNotifier<List<WakeRecord>> {
     final before = state.value ?? await repo.all();
     final record = buildRecord(now, ref.read(targetTimeProvider));
     final saved = await repo.insert(record);
-    state = AsyncData(await repo.all());
+    final all = await repo.all();
+    state = AsyncData(all);
+
+    // 成功の記録を保存した直後に、目標の自動前倒しを判定する。
+    // 新しい目標は、今日の記録には使われず、明日以降の記録から適用される。
+    AutoAdvanceResult? advance;
+    if (saved && record.success) {
+      final settings = ref.read(settingsProvider);
+      advance = evaluateAutoAdvance(
+        all,
+        settings.autoAdvance,
+        settings.targetTime,
+        record.date,
+      );
+      if (advance != null) {
+        final result = advance;
+        await ref
+            .read(settingsProvider.notifier)
+            .update(
+              (s) => s.copyWith(
+                targetTime: result.to,
+                // 最終目標に着いたら、自動前倒しはオフにする。
+                autoAdvance: result.reachedGoal
+                    ? s.autoAdvance.copyWith(enabled: false)
+                    : s.autoAdvance,
+              ),
+            );
+      }
+    }
     return WakeResult(
       saved: saved,
       achievements: saved
           ? detectAchievements(before, record)
           : const Achievements(),
+      autoAdvance: advance,
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/app_settings.dart';
+import '../domain/auto_advance.dart';
 import '../domain/wake_record.dart';
 import 'providers.dart';
 import 'theme_options.dart';
@@ -41,12 +42,22 @@ class SettingsPage extends ConsumerWidget {
             );
             // キャンセルされた場合(null)は何も変更しない。
             if (picked != null) {
-              await ref
+              final turnedOff = await ref
                   .read(settingsProvider.notifier)
                   .setTargetTime(TargetTime(picked.hour, picked.minute));
+              if (turnedOff && context.mounted) {
+                ScaffoldMessenger.of(context)
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(
+                    const SnackBar(
+                      content: Text('最終目標より早い目標にしたため、自動前倒しをオフにしました'),
+                    ),
+                  );
+              }
             }
           },
         ),
+        _AutoAdvanceSettings(settings: settings),
         const _SectionHeader('外観'),
         _ThemeColorPicker(selected: settings.themeColorIndex),
         _ThemeModePicker(selected: settings.themeMode),
@@ -305,6 +316,142 @@ class _ButtonSettingsState extends ConsumerState<_ButtonSettings> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 目標の自動前倒しの設定(オン/オフ、連続成功日数、前倒しの幅、最終目標)。
+class _AutoAdvanceSettings extends ConsumerWidget {
+  const _AutoAdvanceSettings({required this.settings});
+
+  final AppSettings settings;
+
+  void _snack(BuildContext context, String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// 最終目標の問題を、利用者向けの文にする。
+  String _problemText(GoalProblem p) => switch (p) {
+    GoalProblem.tooEarly => '最終目標は${AutoAdvance.earliestGoal}以降の時刻にしてください',
+    GoalProblem.notBeforeTarget => '最終目標は、現在の目標より早い時刻にしてください',
+  };
+
+  /// 「7日連続で成功すると、目標を15分早めます(07:00 → 06:45 → … → 06:00、全4段階)」。
+  String _preview(AutoAdvance a, TargetTime target) {
+    final steps = advanceSteps(target, a.goal, a.minutes);
+    final head = '${a.days}日連続で成功すると、目標を${a.minutes}分早めます';
+    if (steps.length < 2) {
+      return '$head(最終目標 ${a.goal} は、現在の目標より早い時刻にしてください)';
+    }
+    final shown = steps.length <= 4
+        ? steps.join(' → ')
+        : '${steps[0]} → ${steps[1]} → … → ${steps.last}';
+    return '$head($shown、全${steps.length - 1}段階)';
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final auto = settings.autoAdvance;
+    final notifier = ref.read(settingsProvider.notifier);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SwitchListTile(
+          key: const Key('auto_switch'),
+          title: const Text('自動で目標を早める'),
+          subtitle: Text(
+            auto.enabled
+                ? _preview(auto, settings.targetTime)
+                : '連続で成功したら、目標時刻を少しずつ早めます',
+          ),
+          value: auto.enabled,
+          onChanged: (on) async {
+            final problem = await notifier.setAutoEnabled(on);
+            if (problem != null && context.mounted) {
+              _snack(context, _problemText(problem));
+            }
+          },
+        ),
+        if (auto.enabled) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+            child: Text(
+              '連続して成功する日数',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: Wrap(
+              spacing: 8,
+              children: [
+                for (final d in AutoAdvance.dayOptions)
+                  ChoiceChip(
+                    key: Key('auto_days_$d'),
+                    label: Text('$d日'),
+                    selected: auto.days == d,
+                    onSelected: (_) => notifier.setAutoRule(days: d),
+                  ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+            child: Text(
+              '1回に早める幅',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: Wrap(
+              spacing: 8,
+              children: [
+                for (final m in AutoAdvance.minuteOptions)
+                  ChoiceChip(
+                    key: Key('auto_minutes_$m'),
+                    label: Text('$m分'),
+                    selected: auto.minutes == m,
+                    onSelected: (_) => notifier.setAutoRule(minutes: m),
+                  ),
+              ],
+            ),
+          ),
+          ListTile(
+            key: const Key('auto_goal_tile'),
+            title: const Text('最終目標'),
+            subtitle: Text('${AutoAdvance.earliestGoal}以降で、現在の目標より早い時刻'),
+            trailing: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 120),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  '${auto.goal}',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+            ),
+            onTap: () async {
+              final picked = await showTimePicker(
+                context: context,
+                initialTime: TimeOfDay(
+                  hour: auto.goal.hour,
+                  minute: auto.goal.minute,
+                ),
+              );
+              if (picked == null) return;
+              final problem = await notifier.setAutoGoal(
+                TargetTime(picked.hour, picked.minute),
+              );
+              if (problem != null && context.mounted) {
+                _snack(context, _problemText(problem));
+              }
+            },
+          ),
+        ],
+      ],
     );
   }
 }
