@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:wake_up_up/data/record_repository.dart';
 import 'package:wake_up_up/data/settings_repository.dart';
+import 'package:wake_up_up/domain/app_settings.dart';
 import 'package:wake_up_up/domain/wake_logic.dart';
 import 'package:wake_up_up/domain/wake_record.dart';
 import 'package:wake_up_up/presentation/app.dart';
@@ -76,7 +77,8 @@ void main() {
 
   testWidgets('目標時刻の設定が再起動後も残る', (tester) async {
     final prefs = await SharedPreferences.getInstance();
-    await PrefsSettingsRepository(prefs).setTargetTime(const TargetTime(5, 45));
+    await PrefsSettingsRepository(prefs)
+        .save(const AppSettings(targetTime: TargetTime(5, 45)));
 
     await tester.pumpWidget(await _launch());
     await tester.pumpAndSettle();
