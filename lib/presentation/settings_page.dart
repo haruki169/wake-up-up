@@ -37,8 +37,8 @@ class SettingsPage extends ConsumerWidget {
             // キャンセルされた場合(null)は何も変更しない。
             if (picked != null) {
               await ref
-                  .read(targetTimeProvider.notifier)
-                  .set(TargetTime(picked.hour, picked.minute));
+                  .read(settingsProvider.notifier)
+                  .setTargetTime(TargetTime(picked.hour, picked.minute));
             }
           },
         ),

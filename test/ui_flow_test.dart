@@ -34,8 +34,8 @@ void main() {
     expect(find.text('目標 06:30'), findsOneWidget);
 
     await _container(tester)
-        .read(targetTimeProvider.notifier)
-        .set(const TargetTime(8, 0));
+        .read(settingsProvider.notifier)
+        .setTargetTime(const TargetTime(8, 0));
     await tester.pumpAndSettle();
     expect(find.text('目標 08:00'), findsOneWidget);
 
@@ -54,8 +54,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await _container(tester)
-        .read(targetTimeProvider.notifier)
-        .set(const TargetTime(5, 0));
+        .read(settingsProvider.notifier)
+        .setTargetTime(const TargetTime(5, 0));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(Icons.history));

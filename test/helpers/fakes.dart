@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart' show addTearDown;
 import 'package:wake_up_up/data/record_repository.dart';
 import 'package:wake_up_up/data/settings_repository.dart';
+import 'package:wake_up_up/domain/app_settings.dart';
 import 'package:wake_up_up/domain/wake_record.dart';
 import 'package:wake_up_up/presentation/app.dart';
 import 'package:wake_up_up/presentation/providers.dart';
@@ -42,16 +43,22 @@ class ThrowingRecordRepository implements RecordRepository {
   Future<bool> insert(WakeRecord r) async => throw Exception('boom');
 }
 
+/// メモリ上の設定リポジトリ(テスト用)。初期の目標時刻は 6:30。
 class FakeSettings implements SettingsRepository {
-  FakeSettings([this.t = const TargetTime(6, 30)]);
+  FakeSettings([AppSettings? initial])
+    : s = initial ?? const AppSettings(targetTime: TargetTime(6, 30));
 
-  TargetTime t;
+  /// 現在保存されている設定。
+  AppSettings s;
+
+  /// 保存されている目標時刻。
+  TargetTime get t => s.targetTime;
 
   @override
-  TargetTime get targetTime => t;
+  AppSettings load() => s;
 
   @override
-  Future<void> setTargetTime(TargetTime v) async => t = v;
+  Future<void> save(AppSettings settings) async => s = settings;
 }
 
 /// 日付文字列 yyyy-MM-dd。

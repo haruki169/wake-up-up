@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/record_repository.dart';
 import '../data/settings_repository.dart';
+import '../domain/app_settings.dart';
 import '../domain/wake_logic.dart';
 import '../domain/wake_record.dart';
 
@@ -20,21 +21,33 @@ final settingsRepositoryProvider = Provider<SettingsRepository>(
   (_) => throw UnimplementedError(),
 );
 
-/// 目標起床時刻の状態管理。変更すると保存先にも書き込む。
-class TargetTimeNotifier extends Notifier<TargetTime> {
+/// アプリ設定の状態管理。変更すると保存先にも書き込む。
+class SettingsNotifier extends Notifier<AppSettings> {
   @override
-  TargetTime build() => ref.read(settingsRepositoryProvider).targetTime;
+  AppSettings build() => ref.read(settingsRepositoryProvider).load();
 
-  /// 目標時刻を [t] に変更して保存する。
-  Future<void> set(TargetTime t) async {
-    await ref.read(settingsRepositoryProvider).setTargetTime(t);
-    state = t;
+  /// [change] で設定を変更して保存する。
+  ///
+  /// 例: `update((s) => s.copyWith(themeColorIndex: 3))`
+  Future<void> update(AppSettings Function(AppSettings current) change) async {
+    final next = change(state);
+    await ref.read(settingsRepositoryProvider).save(next);
+    state = next;
   }
+
+  /// 目標起床時刻を [t] に変更する。過去の記録には影響しない。
+  Future<void> setTargetTime(TargetTime t) =>
+      update((s) => s.copyWith(targetTime: t));
 }
 
-/// 現在の目標起床時刻。
-final targetTimeProvider = NotifierProvider<TargetTimeNotifier, TargetTime>(
-  TargetTimeNotifier.new,
+/// アプリ設定。
+final settingsProvider = NotifierProvider<SettingsNotifier, AppSettings>(
+  SettingsNotifier.new,
+);
+
+/// 現在の目標起床時刻(設定から取り出した値)。
+final targetTimeProvider = Provider<TargetTime>(
+  (ref) => ref.watch(settingsProvider.select((s) => s.targetTime)),
 );
 
 /// 起床記録一覧(新しい日付順)の状態管理。
