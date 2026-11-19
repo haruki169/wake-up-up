@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/wake_record.dart';
 import 'providers.dart';
+import 'theme_options.dart';
 
 /// 設定画面。目標起床時刻を時刻ピッカーで変更する。
 class SettingsPage extends ConsumerWidget {
@@ -10,9 +11,11 @@ class SettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final target = ref.watch(targetTimeProvider);
+    final settings = ref.watch(settingsProvider);
+    final target = settings.targetTime;
     return ListView(
       children: [
+        const _SectionHeader('目標'),
         ListTile(
           key: const Key('target_tile'),
           title: const Text('目標起床時刻'),
@@ -42,7 +45,114 @@ class SettingsPage extends ConsumerWidget {
             }
           },
         ),
+        const _SectionHeader('外観'),
+        _ThemeColorPicker(selected: settings.themeColorIndex),
+        const SizedBox(height: 24),
       ],
+    );
+  }
+}
+
+/// 設定のセクション見出し。
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    header: true,
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.titleSmall
+            ?.copyWith(color: Theme.of(context).colorScheme.primary),
+      ),
+    ),
+  );
+}
+
+/// テーマカラーを選ぶ円形のチップの並び。
+class _ThemeColorPicker extends ConsumerWidget {
+  const _ThemeColorPicker({required this.selected});
+
+  /// 選択中のテーマカラーの番号。
+  final int selected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('テーマカラー', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (var i = 0; i < themeChoices.length; i++)
+              _ColorChip(
+                index: i,
+                selected: i == selected,
+                onTap: () => ref
+                    .read(settingsProvider.notifier)
+                    .update((s) => s.copyWith(themeColorIndex: i)),
+              ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+/// テーマカラー1色分のチップ。タップ領域は48dp。
+class _ColorChip extends StatelessWidget {
+  const _ColorChip({
+    required this.index,
+    required this.selected,
+    required this.onTap,
+  });
+
+  /// 色の番号([themeChoices] の添字)。
+  final int index;
+
+  /// 選択中かどうか。
+  final bool selected;
+
+  /// タップされたときの処理。
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final choice = themeChoices[index];
+    return Semantics(
+      label: choice.name,
+      button: true,
+      selected: selected,
+      excludeSemantics: true,
+      onTap: onTap,
+      child: InkWell(
+        key: Key('color_chip_$index'),
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: choice.color,
+            shape: BoxShape.circle,
+            border: selected
+                ? Border.all(
+                    width: 3,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  )
+                : null,
+          ),
+          child: selected ? const Icon(Icons.check, color: Colors.white) : null,
+        ),
+      ),
     );
   }
 }
