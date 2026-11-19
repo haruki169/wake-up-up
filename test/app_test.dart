@@ -45,7 +45,7 @@ void main() {
 
     await tester.tap(find.text('履歴').last);
     await tester.pumpAndSettle();
-    expect(find.text('2026-11-19'), findsOneWidget);
+    expect(find.byKey(const Key('day_2026-11-19')), findsOneWidget);
     expect(find.text('+11 pt'), findsOneWidget);
   });
 }

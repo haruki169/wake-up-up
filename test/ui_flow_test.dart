@@ -23,7 +23,7 @@ void main() {
     expect(find.text('記録済み'), findsOneWidget);
     await tester.tap(find.byIcon(Icons.history));
     await tester.pumpAndSettle();
-    expect(find.text('2026-11-19'), findsOneWidget);
+    expect(find.byKey(const Key('day_2026-11-19')), findsOneWidget);
   }, variant: TargetPlatformVariant.all());
 
   testWidgets('目標時刻を変更すると以降の記録に適用される', (tester) async {
