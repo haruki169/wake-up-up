@@ -65,7 +65,10 @@ void main() {
     expect(find.text('記録済み'), findsOneWidget);
     await tester.tap(find.byIcon(Icons.history));
     await tester.pumpAndSettle();
-    expect(find.text(logicalDate(DateTime.now())), findsOneWidget);
+    expect(
+      find.byKey(Key('day_${logicalDate(DateTime.now())}')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('同じ日の2件目はDBに入らない(日付が主キー)', (tester) async {

@@ -177,4 +177,24 @@ void main() {
     await tester.pumpAndSettle();
     await _golden(tester, 'settings_full');
   });
+
+  testWidgets('履歴: ベスト記録カード', (tester) async {
+    setScreen(tester, const Size(390, 844));
+    await tester.pumpWidget(
+      buildApp(
+        clock: () => DateTime(2026, 11, 21, 6, 0),
+        repo: FakeRecordRepository([
+          rec('2026-11-16', true),
+          rec('2026-11-17', true),
+          rec('2026-11-18', true),
+          rec('2026-11-19', false),
+          rec('2026-11-20', true),
+        ]),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.history));
+    await tester.pumpAndSettle();
+    await _golden(tester, 'history_best_records');
+  });
 }

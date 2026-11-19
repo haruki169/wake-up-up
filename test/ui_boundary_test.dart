@@ -32,7 +32,7 @@ void main() {
     expect(find.text('残念、目標に間に合わず'), findsOneWidget);
     await tester.tap(find.byIcon(Icons.history));
     await tester.pumpAndSettle();
-    expect(find.text('2026-11-18'), findsOneWidget);
+    expect(find.byKey(const Key('day_2026-11-18')), findsOneWidget);
   });
 
   testWidgets('3:00 は当日扱い(日付は当日・成功)', (tester) async {
@@ -41,7 +41,7 @@ void main() {
     expect(find.text('成功！ +15 pt'), findsOneWidget);
     await tester.tap(find.byIcon(Icons.history));
     await tester.pumpAndSettle();
-    expect(find.text('2026-11-19'), findsOneWidget);
+    expect(find.byKey(const Key('day_2026-11-19')), findsOneWidget);
   });
 
   for (final (h, m, pts) in [
