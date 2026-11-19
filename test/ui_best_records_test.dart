@@ -79,6 +79,8 @@ void main() {
       tester,
       records: [rec('2026-11-18', true), rec('2026-11-19', false)],
     );
+    await tester.tap(find.byKey(const Key('view_list')));
+    await tester.pumpAndSettle();
     expect(find.text('2026-11-19'), findsWidgets);
     expect(find.text('+10 pt'), findsOneWidget);
   });

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_test/flutter_test.dart' show addTearDown;
+import 'package:flutter_test/flutter_test.dart'
+    show WidgetTester, addTearDown, find;
 import 'package:wake_up_up/data/record_repository.dart';
 import 'package:wake_up_up/data/settings_repository.dart';
 import 'package:wake_up_up/domain/app_settings.dart';
@@ -102,4 +103,16 @@ void setScreen(
     tester.view.reset();
     tester.platformDispatcher.clearTextScaleFactorTestValue();
   });
+}
+
+/// 履歴タブを開き、日ごとの表示を「リスト」に切り替える。
+Future<void> openHistoryList(WidgetTester tester) async {
+  await tester.tap(find.byIcon(Icons.history));
+  await tester.pumpAndSettle();
+  // 画面が低いと切替が画面外(未構築)になるため、見えるまでスクロールする。
+  await tester.scrollUntilVisible(find.byKey(const Key('view_list')), 200);
+  await tester.ensureVisible(find.byKey(const Key('view_list')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('view_list')));
+  await tester.pumpAndSettle();
 }

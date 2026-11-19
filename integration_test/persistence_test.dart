@@ -65,10 +65,24 @@ void main() {
     expect(find.text('記録済み'), findsOneWidget);
     await tester.tap(find.byIcon(Icons.history));
     await tester.pumpAndSettle();
+    final today = logicalDate(DateTime.now());
+    // カレンダー(初期表示)に、今日の記録が成功または失敗のマークで出る。
+    final cell = find.byKey(Key('cell_$today'));
+    await tester.scrollUntilVisible(cell, 200);
     expect(
-      find.byKey(Key('day_${logicalDate(DateTime.now())}')),
+      find.descendant(
+        of: cell,
+        matching: find.byWidgetPredicate(
+          (w) => w is Icon && (w.icon == Icons.check || w.icon == Icons.close),
+        ),
+      ),
       findsOneWidget,
     );
+    // リストに切り替えると日ごとの行が出る。
+    await tester.scrollUntilVisible(find.byKey(const Key('view_list')), 200);
+    await tester.tap(find.byKey(const Key('view_list')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(Key('day_$today')), findsOneWidget);
   });
 
   testWidgets('同じ日の2件目はDBに入らない(日付が主キー)', (tester) async {

@@ -149,8 +149,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.history));
-    await tester.pumpAndSettle();
+    await openHistoryList(tester);
     final status = Theme.of(tester.element(find.byType(Scaffold)))
         .extension<StatusColors>()!;
     expect(

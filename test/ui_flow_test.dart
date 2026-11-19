@@ -21,8 +21,7 @@ void main() {
     await tester.tap(find.byKey(const Key('wake_button')));
     await tester.pumpAndSettle();
     expect(find.text('記録済み'), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.history));
-    await tester.pumpAndSettle();
+    await openHistoryList(tester);
     expect(find.byKey(const Key('day_2026-11-19')), findsOneWidget);
   }, variant: TargetPlatformVariant.all());
 
@@ -58,8 +57,7 @@ void main() {
         .setTargetTime(const TargetTime(5, 0));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.history));
-    await tester.pumpAndSettle();
+    await openHistoryList(tester);
     expect(find.textContaining('目標 06:30'), findsOneWidget);
     expect(find.text('+11 pt'), findsOneWidget);
   });

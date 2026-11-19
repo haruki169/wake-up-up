@@ -30,8 +30,7 @@ void main() {
   testWidgets('2:59 は前日扱い(日付は前日・失敗)', (tester) async {
     await _wake(tester, DateTime(2026, 11, 19, 2, 59));
     expect(find.text('残念、目標に間に合わず'), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.history));
-    await tester.pumpAndSettle();
+    await openHistoryList(tester);
     expect(find.byKey(const Key('day_2026-11-18')), findsOneWidget);
   });
 
@@ -39,8 +38,7 @@ void main() {
     await _wake(tester, DateTime(2026, 11, 19, 3, 0));
     // 3:30 早い → 10 + 5(上限) = 15pt
     expect(find.text('成功！ +15 pt'), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.history));
-    await tester.pumpAndSettle();
+    await openHistoryList(tester);
     expect(find.byKey(const Key('day_2026-11-19')), findsOneWidget);
   });
 

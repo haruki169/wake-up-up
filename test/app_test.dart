@@ -45,6 +45,11 @@ void main() {
 
     await tester.tap(find.text('履歴').last);
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.byKey(const Key('view_list')), 200);
+    await tester.ensureVisible(find.byKey(const Key('view_list')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('view_list')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('day_2026-11-19')), findsOneWidget);
     expect(find.text('+11 pt'), findsOneWidget);
   });
