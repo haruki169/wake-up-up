@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'history_page.dart';
 import 'home_page.dart';
 import 'providers.dart';
+import 'rewards_page.dart';
 import 'settings_page.dart';
 import 'theme_options.dart';
 
@@ -27,7 +28,7 @@ class WakeUpUpApp extends ConsumerWidget {
   }
 }
 
-/// 下部タブ(ホーム/履歴/設定)で3つの画面を切り替える枠組み。
+/// 下部タブ(ホーム/履歴/ご褒美/設定)で4つの画面を切り替える枠組み。
 class _Shell extends ConsumerStatefulWidget {
   const _Shell();
 
@@ -58,14 +59,19 @@ class _ShellState extends ConsumerState<_Shell> with WidgetsBindingObserver {
     }
   }
 
-  /// 表示中のタブの番号(0: ホーム、1: 履歴、2: 設定)。
+  /// 表示中のタブの番号(0: ホーム、1: 履歴、2: ご褒美、3: 設定)。
   int _index = 0;
 
   /// 各タブのアプリバー用タイトル。[_pages] と同じ順序。
-  static const _titles = ['ホーム', '履歴', '設定'];
+  static const _titles = ['ホーム', '履歴', 'ご褒美', '設定'];
 
   /// 各タブの画面。[_titles] と同じ順序。
-  static const _pages = [HomePage(), HistoryPage(), SettingsPage()];
+  static const _pages = [
+    HomePage(),
+    HistoryPage(),
+    RewardsPage(),
+    SettingsPage(),
+  ];
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -77,6 +83,7 @@ class _ShellState extends ConsumerState<_Shell> with WidgetsBindingObserver {
       destinations: const [
         NavigationDestination(icon: Icon(Icons.wb_sunny), label: 'ホーム'),
         NavigationDestination(icon: Icon(Icons.history), label: '履歴'),
+        NavigationDestination(icon: Icon(Icons.card_giftcard), label: 'ご褒美'),
         NavigationDestination(icon: Icon(Icons.settings), label: '設定'),
       ],
     ),
