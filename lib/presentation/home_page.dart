@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/wake_logic.dart';
 import '../domain/wake_record.dart';
+import 'achievement_ui.dart';
 import 'providers.dart';
 import 'wake_button.dart';
 
@@ -73,7 +74,15 @@ class HomePage extends ConsumerWidget {
                 label: todayRecord == null ? settings.wakeLabel : '記録済み',
                 iconKey: todayRecord == null ? settings.wakeIconKey : 'none',
                 onPressed: todayRecord == null
-                    ? () => ref.read(recordsProvider.notifier).wake()
+                    ? () async {
+                        final result = await ref
+                            .read(recordsProvider.notifier)
+                            .wake();
+                        // 節目の到達や記録の更新を知らせる(画面が残っているときだけ)。
+                        if (context.mounted) {
+                          await showAchievements(context, result.achievements);
+                        }
+                      }
                     : null,
               ),
             ),

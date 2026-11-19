@@ -197,4 +197,36 @@ void main() {
     await tester.pumpAndSettle();
     await _golden(tester, 'history_best_records');
   });
+
+  testWidgets('節目のお祝いダイアログ(7日連続)', (tester) async {
+    setScreen(tester, const Size(390, 844));
+    await tester.pumpWidget(
+      buildApp(
+        clock: () => DateTime(2026, 11, 7, 6, 0),
+        repo: FakeRecordRepository([
+          for (var i = 1; i <= 6; i++) rec('2026-11-0$i', true),
+        ]),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('wake_button')));
+    await tester.pumpAndSettle();
+    await _golden(tester, 'milestone_dialog');
+  });
+
+  testWidgets('履歴: バッジ一覧(7日取得)', (tester) async {
+    setScreen(tester, const Size(390, 1000));
+    await tester.pumpWidget(
+      buildApp(
+        clock: () => DateTime(2026, 11, 20, 6, 0),
+        repo: FakeRecordRepository([
+          for (var i = 1; i <= 7; i++) rec('2026-11-0$i', true),
+        ]),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.history));
+    await tester.pumpAndSettle();
+    await _golden(tester, 'history_badges');
+  });
 }

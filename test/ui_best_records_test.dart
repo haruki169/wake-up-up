@@ -97,6 +97,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('wake_button')));
     await tester.pumpAndSettle();
+    // 3日連続の節目に到達してお祝いが出るので閉じる。
+    await tester.tap(find.byKey(const Key('milestone_close')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.history));
     await tester.pumpAndSettle();
     expect(_in('best_streak', find.text('3 日')), findsOneWidget);

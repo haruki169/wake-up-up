@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/record_repository.dart';
 import '../data/settings_repository.dart';
+import '../domain/achievements.dart';
 import '../domain/app_settings.dart';
 import '../domain/wake_logic.dart';
 import '../domain/wake_record.dart';
@@ -50,6 +51,17 @@ final targetTimeProvider = Provider<TargetTime>(
   (ref) => ref.watch(settingsProvider.select((s) => s.targetTime)),
 );
 
+/// 「起きた」を押した結果。
+class WakeResult {
+  const WakeResult({required this.saved, required this.achievements});
+
+  /// 記録が新しく保存されたか(今日が記録済みなら `false`)。
+  final bool saved;
+
+  /// 達成した内容(保存されなかったときは何もない)。
+  final Achievements achievements;
+}
+
 /// 起床記録一覧(新しい日付順)の状態管理。
 class RecordsNotifier extends AsyncNotifier<List<WakeRecord>> {
   @override
@@ -58,12 +70,20 @@ class RecordsNotifier extends AsyncNotifier<List<WakeRecord>> {
   /// 「起きた」ボタンの処理。現在時刻で記録を作って保存し、一覧を更新する。
   ///
   /// 今日(論理日付)が記録済みの場合、保存はされず一覧は変わらない。
-  Future<void> wake() async {
+  /// 戻り値には、保存できたかどうかと、節目などの達成内容が入る。
+  Future<WakeResult> wake() async {
     final now = ref.read(clockProvider)();
     final repo = ref.read(recordRepositoryProvider);
+    final before = state.value ?? await repo.all();
     final record = buildRecord(now, ref.read(targetTimeProvider));
-    await repo.insert(record);
+    final saved = await repo.insert(record);
     state = AsyncData(await repo.all());
+    return WakeResult(
+      saved: saved,
+      achievements: saved
+          ? detectAchievements(before, record)
+          : const Achievements(),
+    );
   }
 }
 
