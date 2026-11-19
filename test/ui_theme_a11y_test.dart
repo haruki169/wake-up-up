@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wake_up_up/domain/app_settings.dart';
+import 'package:wake_up_up/domain/auto_advance.dart';
 import 'package:wake_up_up/presentation/theme_options.dart';
 
 import 'helpers/fakes.dart';
@@ -34,7 +35,11 @@ void main() {
           buildApp(
             clock: () => DateTime(2026, 11, 20, 6, 0),
             settings: FakeSettings(
-              AppSettings(themeColorIndex: i, themeMode: mode),
+              AppSettings(
+                themeColorIndex: i,
+                themeMode: mode,
+                autoAdvance: const AutoAdvance(enabled: true),
+              ),
             ),
             repo: records,
             rewards: rewards,

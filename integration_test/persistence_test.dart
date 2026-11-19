@@ -11,6 +11,7 @@ import 'package:wake_up_up/data/record_repository.dart';
 import 'package:wake_up_up/data/reward_repository.dart';
 import 'package:wake_up_up/data/settings_repository.dart';
 import 'package:wake_up_up/domain/app_settings.dart';
+import 'package:wake_up_up/domain/auto_advance.dart';
 import 'package:wake_up_up/domain/wake_logic.dart';
 import 'package:wake_up_up/domain/wake_record.dart';
 import 'package:wake_up_up/presentation/app.dart';
@@ -248,6 +249,70 @@ void main() {
       tester.widget<Text>(find.byKey(const Key('spent_value'))).data,
       '使用済み 10 pt',
     );
+  });
+
+  testWidgets('7日連続で目標が前倒しされ、再起動後も新しい目標と設定が残る', (tester) async {
+    // 目標 23:59 で、直近6日間(今日の前日まで)成功した記録を実DBに入れる。
+    const target = TargetTime(23, 59);
+    final repo = await SqliteRecordRepository.open();
+    final today = logicalDate(DateTime.now());
+    final todayDay = DateTime.parse(today);
+    for (var back = 6; back >= 1; back--) {
+      final day = DateTime(
+        todayDay.year,
+        todayDay.month,
+        todayDay.day - back,
+        6,
+        0,
+      );
+      await repo.insert(buildRecord(day, target));
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await PrefsSettingsRepository(prefs).save(
+      const AppSettings(
+        targetTime: target,
+        autoAdvance: AutoAdvance(enabled: true, days: 7, minutes: 30),
+      ),
+    );
+
+    await tester.pumpWidget(await _launch());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('wake_button')));
+    await tester.pumpAndSettle();
+
+    // 午前3:00 より前に実行すると、押した時刻が前日の目標(23:59)を過ぎて失敗になり、
+    // 前倒しされない。時刻によって期待を切り替える。
+    final succeeds = DateTime.now().hour >= 3;
+    if (succeeds) {
+      // 7日連続の節目 → 前倒しの順にダイアログが出る。
+      expect(find.byKey(const Key('milestone_dialog')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('milestone_close')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('advance_dialog')), findsOneWidget);
+      expect(find.textContaining('23:59 → 23:29'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('advance_close')));
+      await tester.pumpAndSettle();
+      expect(find.text('目標 23:29'), findsOneWidget);
+    } else {
+      expect(find.byKey(const Key('advance_dialog')), findsNothing);
+      expect(find.text('目標 23:59'), findsOneWidget);
+    }
+    final expectedTarget = succeeds ? const TargetTime(23, 29) : target;
+
+    // 再起動後も、新しい目標と自動前倒しの設定が残る。
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(await _launch());
+    await tester.pumpAndSettle();
+    expect(find.text('目標 $expectedTarget'), findsOneWidget);
+    final saved = PrefsSettingsRepository(await SharedPreferences.getInstance())
+        .load();
+    expect(saved.targetTime, expectedTarget);
+    expect(saved.autoAdvance.enabled, isTrue);
+    expect(saved.autoAdvance.minutes, 30);
+    // 今日の記録は古い目標(23:59)で保存されている。
+    final todayRecord = (await (await SqliteRecordRepository.open()).all())
+        .firstWhere((r) => r.date == today);
+    expect(todayRecord.targetTime, target);
   });
 
   testWidgets('保存した記録の内容(目標・成否・ポイント)が正しく復元される', (tester) async {

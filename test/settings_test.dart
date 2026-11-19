@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wake_up_up/data/settings_repository.dart';
 import 'package:wake_up_up/domain/app_settings.dart';
+import 'package:wake_up_up/domain/auto_advance.dart';
 import 'package:wake_up_up/domain/wake_record.dart';
 
 Future<PrefsSettingsRepository> _repo([
@@ -116,6 +117,60 @@ void main() {
 
     test('空の文言は初期値', () async {
       expect((await _repo({'wake_label': '  '})).load().wakeLabel, '起きた');
+    });
+
+    group('自動前倒し', () {
+      test('初期値はオフ・7日・15分・最終目標 6:00', () async {
+        expect((await _repo()).load().autoAdvance, const AutoAdvance());
+      });
+
+      test('保存した設定を読み戻せる', () async {
+        final repo = await _repo();
+        const a = AutoAdvance(
+          enabled: true,
+          days: 10,
+          minutes: 30,
+          goal: TargetTime(5, 30),
+        );
+        await repo.save(const AppSettings().copyWith(autoAdvance: a));
+        expect(repo.load().autoAdvance, a);
+      });
+
+      test('選択肢にない日数・幅は初期値に戻る', () async {
+        final a = (await _repo({'auto_days': 4, 'auto_minutes': 20}))
+            .load()
+            .autoAdvance;
+        expect(a.days, 7);
+        expect(a.minutes, 15);
+      });
+
+      test('壊れた最終目標・4:00より早い最終目標は初期値に戻る', () async {
+        for (final bad in ['abc', '03:30', '25:00', '06:99', '']) {
+          expect(
+            (await _repo({'auto_goal': bad})).load().autoAdvance.goal,
+            const TargetTime(6, 0),
+            reason: bad,
+          );
+        }
+      });
+
+      test('4:00 ちょうどは有効', () async {
+        expect(
+          (await _repo({'auto_goal': '04:00'})).load().autoAdvance.goal,
+          const TargetTime(4, 0),
+        );
+      });
+
+      test('ほかの設定と一緒に保存しても影響し合わない', () async {
+        final repo = await _repo();
+        const s = AppSettings(
+          targetTime: TargetTime(6, 45),
+          themeColorIndex: 2,
+          autoAdvance: AutoAdvance(enabled: true),
+        );
+        await repo.save(s);
+        expect(repo.load(), s);
+      });
     });
   });
 }

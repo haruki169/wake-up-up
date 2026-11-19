@@ -1,5 +1,6 @@
 import 'package:characters/characters.dart';
 
+import 'auto_advance.dart';
 import 'wake_record.dart';
 
 /// 画面の明暗の選び方。
@@ -37,6 +38,7 @@ class AppSettings {
     this.themeMode = AppThemeMode.system,
     this.wakeLabel = defaultWakeLabel,
     this.wakeIconKey = 'none',
+    this.autoAdvance = const AutoAdvance(),
   });
 
   /// 「起きた」ボタンの文言の初期値。
@@ -63,6 +65,9 @@ class AppSettings {
   /// 「起きた」ボタンのアイコンのキー([wakeIconKeys] のいずれか)。
   final String wakeIconKey;
 
+  /// 目標の自動前倒しの設定。
+  final AutoAdvance autoAdvance;
+
   /// 一部の項目だけ変えた新しい設定を返す。
   AppSettings copyWith({
     TargetTime? targetTime,
@@ -70,12 +75,14 @@ class AppSettings {
     AppThemeMode? themeMode,
     String? wakeLabel,
     String? wakeIconKey,
+    AutoAdvance? autoAdvance,
   }) => AppSettings(
     targetTime: targetTime ?? this.targetTime,
     themeColorIndex: themeColorIndex ?? this.themeColorIndex,
     themeMode: themeMode ?? this.themeMode,
     wakeLabel: wakeLabel ?? this.wakeLabel,
     wakeIconKey: wakeIconKey ?? this.wakeIconKey,
+    autoAdvance: autoAdvance ?? this.autoAdvance,
   );
 
   /// ボタンの文言として使える形に整える。
@@ -95,7 +102,8 @@ class AppSettings {
       other.themeColorIndex == themeColorIndex &&
       other.themeMode == themeMode &&
       other.wakeLabel == wakeLabel &&
-      other.wakeIconKey == wakeIconKey;
+      other.wakeIconKey == wakeIconKey &&
+      other.autoAdvance == autoAdvance;
 
   @override
   int get hashCode => Object.hash(
@@ -104,5 +112,6 @@ class AppSettings {
     themeMode,
     wakeLabel,
     wakeIconKey,
+    autoAdvance,
   );
 }

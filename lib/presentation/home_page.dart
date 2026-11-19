@@ -84,6 +84,11 @@ class HomePage extends ConsumerWidget {
                         if (context.mounted) {
                           await showAchievements(context, result.achievements);
                         }
+                        // 続けて、目標を前倒ししたことを知らせる。
+                        final advance = result.autoAdvance;
+                        if (advance != null && context.mounted) {
+                          await showAutoAdvance(context, advance);
+                        }
                       }
                     : null,
               ),

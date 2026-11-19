@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../domain/achievements.dart';
+import '../domain/auto_advance.dart';
 
 /// 節目ごとのお祝いのひとこと。
 const Map<int, String> milestoneMessages = {
@@ -73,6 +74,55 @@ class MilestoneDialog extends StatelessWidget {
       actions: [
         TextButton(
           key: const Key('milestone_close'),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('閉じる'),
+        ),
+      ],
+    );
+  }
+}
+
+/// 目標を自動で前倒ししたことを知らせるダイアログを出す。
+///
+/// 最終目標に到達したときは、到達のお祝いと、自動前倒しをオフにしたことを伝える。
+Future<void> showAutoAdvance(BuildContext context, AutoAdvanceResult result) =>
+    showDialog<void>(
+      context: context,
+      builder: (_) => AutoAdvanceDialog(result: result),
+    );
+
+/// 目標の自動前倒しを知らせるダイアログ。
+class AutoAdvanceDialog extends StatelessWidget {
+  const AutoAdvanceDialog({super.key, required this.result});
+
+  /// 前倒しの内容。
+  final AutoAdvanceResult result;
+
+  @override
+  Widget build(BuildContext context) {
+    final reached = result.reachedGoal;
+    return AlertDialog(
+      key: const Key('advance_dialog'),
+      scrollable: true,
+      icon: Icon(
+        reached ? Icons.flag : Icons.alarm,
+        size: 48,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      title: Text(
+        reached ? '最終目標に到達しました！' : '目標を前倒ししました',
+        textAlign: TextAlign.center,
+      ),
+      content: Text(
+        reached
+            ? '明日から目標が ${result.from} → ${result.to} になります。\n'
+                  '最終目標に着いたので、自動前倒しをオフにしました。'
+            : '連続で成功したので、明日から目標が ${result.from} → ${result.to} になります。',
+        textAlign: TextAlign.center,
+      ),
+      actions: [
+        TextButton(
+          key: const Key('advance_close'),
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('閉じる'),
         ),
