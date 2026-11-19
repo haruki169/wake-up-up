@@ -119,6 +119,35 @@ void main() {
     expect(app.themeMode, ThemeMode.dark);
   });
 
+  testWidgets('ボタンの文言とアイコンが保存され、再起動後のホームに反映される', (tester) async {
+    await tester.pumpWidget(await _launch());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('label_field')), '朝活');
+    await tester.pumpAndSettle();
+    // 入力欄のフォーカスを外し、チップが画面内に完全に入るまでスクロールする。
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('icon_chip_rocket')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('icon_chip_rocket')));
+    await tester.pumpAndSettle();
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(await _launch());
+    await tester.pumpAndSettle();
+    final button = find.byKey(const Key('wake_button'));
+    expect(
+      find.descendant(of: button, matching: find.text('朝活')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: button, matching: find.byIcon(Icons.rocket_launch)),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('保存した記録の内容(目標・成否・ポイント)が正しく復元される', (tester) async {
     final repo = await SqliteRecordRepository.open();
     final woke = DateTime(2026, 11, 19, 6, 20);

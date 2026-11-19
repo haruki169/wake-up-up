@@ -5,6 +5,7 @@ import '../domain/app_settings.dart';
 import '../domain/wake_record.dart';
 import 'providers.dart';
 import 'theme_options.dart';
+import 'wake_button.dart';
 
 /// 設定画面。目標起床時刻を時刻ピッカーで変更する。
 class SettingsPage extends ConsumerWidget {
@@ -49,6 +50,8 @@ class SettingsPage extends ConsumerWidget {
         const _SectionHeader('外観'),
         _ThemeColorPicker(selected: settings.themeColorIndex),
         _ThemeModePicker(selected: settings.themeMode),
+        const _SectionHeader('ホームのボタン'),
+        const _ButtonSettings(),
         const SizedBox(height: 24),
       ],
     );
@@ -194,4 +197,114 @@ class _ThemeModePicker extends ConsumerWidget {
       ],
     ),
   );
+}
+
+/// ホームの「起きた」ボタンの文言とアイコンの設定。
+class _ButtonSettings extends ConsumerStatefulWidget {
+  const _ButtonSettings();
+
+  @override
+  ConsumerState<_ButtonSettings> createState() => _ButtonSettingsState();
+}
+
+class _ButtonSettingsState extends ConsumerState<_ButtonSettings> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: ref.read(settingsProvider).wakeLabel,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  /// 入力のたびに、整えた文言を保存する(空なら初期値になる)。
+  void _onChanged(String text) => ref
+      .read(settingsProvider.notifier)
+      .update((s) => s.copyWith(wakeLabel: AppSettings.normalizeLabel(text)));
+
+  /// 文言とアイコンを初期値に戻す。
+  void _reset() {
+    _controller.text = AppSettings.defaultWakeLabel;
+    ref
+        .read(settingsProvider.notifier)
+        .update(
+          (s) => s.copyWith(
+            wakeLabel: AppSettings.defaultWakeLabel,
+            wakeIconKey: 'none',
+          ),
+        );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = ref.watch(settingsProvider);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 押せないプレビュー(見た目の確認用)。
+          ExcludeSemantics(
+            child: IgnorePointer(
+              child: buildWakeButton(
+                key: const Key('wake_preview'),
+                label: settings.wakeLabel,
+                iconKey: settings.wakeIconKey,
+                onPressed: () {},
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            key: const Key('label_field'),
+            controller: _controller,
+            maxLength: AppSettings.maxLabelLength,
+            textInputAction: TextInputAction.done,
+            decoration: const InputDecoration(
+              labelText: 'ボタンの文言',
+              helperText: '空にすると「${AppSettings.defaultWakeLabel}」に戻ります',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: _onChanged,
+          ),
+          const SizedBox(height: 8),
+          Text('アイコン', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              for (final entry in wakeIconOptions.entries)
+                ChoiceChip(
+                  key: Key('icon_chip_${entry.key}'),
+                  label: Text(entry.value.label),
+                  avatar: entry.value.icon == null
+                      ? null
+                      : Icon(entry.value.icon, size: 18),
+                  selected: settings.wakeIconKey == entry.key,
+                  onSelected: (_) => ref
+                      .read(settingsProvider.notifier)
+                      .update((s) => s.copyWith(wakeIconKey: entry.key)),
+                ),
+            ],
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              key: const Key('reset_button'),
+              onPressed: _reset,
+              child: const Text('初期値に戻す'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
