@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/record_repository.dart';
+import '../data/reward_repository.dart';
 import '../data/settings_repository.dart';
 import '../domain/achievements.dart';
 import '../domain/app_settings.dart';
@@ -14,6 +15,11 @@ final clockProvider = Provider<DateTime Function()>((_) => DateTime.now);
 
 /// 起床記録の保存先。`main` またはテストで必ず override する。
 final recordRepositoryProvider = Provider<RecordRepository>(
+  (_) => throw UnimplementedError(),
+);
+
+/// ご褒美・交換・残高の保存先。`main` またはテストで override する。
+final rewardRepositoryProvider = Provider<RewardRepository>(
   (_) => throw UnimplementedError(),
 );
 

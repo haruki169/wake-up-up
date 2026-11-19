@@ -1,7 +1,7 @@
-import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
 import '../domain/wake_record.dart';
+import 'app_database.dart';
 
 /// 起床記録の保存先を抽象化したリポジトリ。
 ///
@@ -19,32 +19,13 @@ abstract class RecordRepository {
 
 /// SQLite(sqflite)に記録を保存する [RecordRepository] の実装。
 class SqliteRecordRepository implements RecordRepository {
-  SqliteRecordRepository._(this._db);
+  SqliteRecordRepository(this._db);
 
   final Database _db;
 
-  /// データベースを開く。初回は `wake_records` テーブルを作成する。
-  ///
-  /// カラム: `date`(論理日付、主キー)、`woke_at`(起床時刻のエポックミリ秒)、
-  /// `target_time`(`HH:mm`)、`success`(0/1)、`points`。
-  /// 日付を主キーにすることで、1日1件の制約をデータベース側でも保証する。
-  static Future<SqliteRecordRepository> open() async {
-    final path = p.join(await getDatabasesPath(), 'wake_up_up.db');
-    final db = await openDatabase(
-      path,
-      version: 1,
-      onCreate: (db, _) => db.execute('''
-        CREATE TABLE wake_records (
-          date TEXT PRIMARY KEY,
-          woke_at INTEGER NOT NULL,
-          target_time TEXT NOT NULL,
-          success INTEGER NOT NULL,
-          points INTEGER NOT NULL
-        )
-      '''),
-    );
-    return SqliteRecordRepository._(db);
-  }
+  /// アプリのデータベースを開いて、そこに保存するリポジトリを返す。
+  static Future<SqliteRecordRepository> open() async =>
+      SqliteRecordRepository(await AppDatabase.open());
 
   @override
   Future<List<WakeRecord>> all() async {
