@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../domain/app_settings.dart';
 import '../domain/wake_record.dart';
 import 'providers.dart';
 import 'theme_options.dart';
@@ -47,6 +48,7 @@ class SettingsPage extends ConsumerWidget {
         ),
         const _SectionHeader('外観'),
         _ThemeColorPicker(selected: settings.themeColorIndex),
+        _ThemeModePicker(selected: settings.themeMode),
         const SizedBox(height: 24),
       ],
     );
@@ -155,4 +157,41 @@ class _ColorChip extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 画面の明暗(端末に合わせる/ライト/ダーク)を選ぶラジオの並び。
+///
+/// 文字が大きい端末や小さい画面でも崩れないよう、縦に並べる。
+class _ThemeModePicker extends ConsumerWidget {
+  const _ThemeModePicker({required this.selected});
+
+  /// 選択中の明暗。
+  final AppThemeMode selected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => RadioGroup<AppThemeMode>(
+    groupValue: selected,
+    onChanged: (mode) {
+      if (mode == null) return;
+      ref
+          .read(settingsProvider.notifier)
+          .update((s) => s.copyWith(themeMode: mode));
+    },
+    child: const Column(
+      children: [
+        RadioListTile<AppThemeMode>(
+          value: AppThemeMode.system,
+          title: Text('端末の設定に合わせる'),
+        ),
+        RadioListTile<AppThemeMode>(
+          value: AppThemeMode.light,
+          title: Text('ライト'),
+        ),
+        RadioListTile<AppThemeMode>(
+          value: AppThemeMode.dark,
+          title: Text('ダーク'),
+        ),
+      ],
+    ),
+  );
 }

@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:wake_up_up/domain/app_settings.dart';
+
 import 'helpers/fakes.dart';
 
 /// 全画面を巡回して、レイアウト例外(オーバーフローなど)が出ないことを確認する。
@@ -118,6 +120,31 @@ void main() {
       await tester.tap(find.byKey(const Key('color_chip_7')));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final (label, size, scale) in [
+    ('通常', const Size(390, 844), 1.0),
+    ('小さい画面 + 文字3倍', const Size(320, 568), 3.0),
+  ]) {
+    testWidgets('ダークモードで全画面を巡回できる($label)', (tester) async {
+      setScreen(tester, size, textScale: scale);
+      await tester.pumpWidget(
+        buildApp(
+          clock: () => DateTime(2026, 11, 19, 6, 0),
+          settings: FakeSettings(
+            const AppSettings(themeMode: AppThemeMode.dark),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('wake_button')));
+      await tester.pumpAndSettle();
+      for (final icon in [Icons.history, Icons.settings, Icons.wb_sunny]) {
+        await tester.tap(find.byIcon(icon));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+      }
     });
   }
 }

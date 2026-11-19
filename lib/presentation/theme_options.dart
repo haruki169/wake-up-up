@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../domain/app_settings.dart';
+
 /// テーマカラーの選択肢(名前とシード色)。
 class ThemeChoice {
   const ThemeChoice(this.name, this.color);
@@ -72,3 +74,10 @@ ThemeData buildTheme(int colorIndex, Brightness brightness) {
     ],
   );
 }
+
+/// 設定の [AppThemeMode] を Flutter の [ThemeMode] に変換する。
+ThemeMode toThemeMode(AppThemeMode m) => switch (m) {
+  AppThemeMode.system => ThemeMode.system,
+  AppThemeMode.light => ThemeMode.light,
+  AppThemeMode.dark => ThemeMode.dark,
+};

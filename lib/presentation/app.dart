@@ -7,7 +7,7 @@ import 'providers.dart';
 import 'settings_page.dart';
 import 'theme_options.dart';
 
-/// アプリ全体のルート。設定のテーマカラーを反映して [_Shell] を表示する。
+/// アプリ全体のルート。設定のテーマカラーと明暗を反映して [_Shell] を表示する。
 class WakeUpUpApp extends ConsumerWidget {
   const WakeUpUpApp({super.key});
 
@@ -16,9 +16,12 @@ class WakeUpUpApp extends ConsumerWidget {
     final colorIndex = ref.watch(
       settingsProvider.select((s) => s.themeColorIndex),
     );
+    final mode = ref.watch(settingsProvider.select((s) => s.themeMode));
     return MaterialApp(
       title: 'wake-up-up',
       theme: buildTheme(colorIndex, Brightness.light),
+      darkTheme: buildTheme(colorIndex, Brightness.dark),
+      themeMode: toThemeMode(mode),
       home: const _Shell(),
     );
   }

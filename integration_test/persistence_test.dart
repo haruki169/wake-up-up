@@ -104,6 +104,21 @@ void main() {
     );
   });
 
+  testWidgets('ダークモードを選ぶと保存され、再起動後も維持される', (tester) async {
+    await tester.pumpWidget(await _launch());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ダーク'));
+    await tester.pumpAndSettle();
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(await _launch());
+    await tester.pumpAndSettle();
+    final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(app.themeMode, ThemeMode.dark);
+  });
+
   testWidgets('保存した記録の内容(目標・成否・ポイント)が正しく復元される', (tester) async {
     final repo = await SqliteRecordRepository.open();
     final woke = DateTime(2026, 11, 19, 6, 20);
